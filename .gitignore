@@ -1,0 +1,8 @@
+.venv/
+storage/
+__pycache__/
+*.pyc
+*.bin
+*.txt.bak
+up1.txt
+resp.txt
