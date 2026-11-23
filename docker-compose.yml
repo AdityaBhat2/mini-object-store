@@ -1,0 +1,61 @@
+# Mini Distributed Cloud Object Store: 1 controller + 4 workers (no Kubernetes).
+x-worker: &worker
+  build: ./worker
+  restart: unless-stopped        # a manual `docker stop` is NOT auto-restarted
+  depends_on:
+    controller:
+      condition: service_healthy
+  networks: [objstore]
+
+services:
+  controller:
+    build: ./controller
+    container_name: controller
+    restart: unless-stopped
+    environment:
+      DB_PATH: /data/metadata.db
+      CHUNK_SIZE: "1048576"
+      REPLICATION_FACTOR: "2"
+      HEARTBEAT_TIMEOUT_SECONDS: "9"
+      HEALTH_CHECK_INTERVAL_SECONDS: "2"
+      REPLICATION_INTERVAL_SECONDS: "4"
+      SCRUB_INTERVAL_SECONDS: "30"
+      DEMO_MODE: "1"        # enables the UI "corrupt chunk" button; set "0" to disable
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./storage/controller:/data
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request as u; u.urlopen('http://localhost:8000/health', timeout=2)"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+    networks: [objstore]
+
+  worker1:
+    <<: *worker
+    container_name: worker1
+    environment: {WORKER_ID: worker1, WORKER_URL: "http://worker1:8000", CONTROLLER_URL: "http://controller:8000"}
+    volumes: ["./storage/worker1:/data/chunks"]
+
+  worker2:
+    <<: *worker
+    container_name: worker2
+    environment: {WORKER_ID: worker2, WORKER_URL: "http://worker2:8000", CONTROLLER_URL: "http://controller:8000"}
+    volumes: ["./storage/worker2:/data/chunks"]
+
+  worker3:
+    <<: *worker
+    container_name: worker3
+    environment: {WORKER_ID: worker3, WORKER_URL: "http://worker3:8000", CONTROLLER_URL: "http://controller:8000"}
+    volumes: ["./storage/worker3:/data/chunks"]
+
+  worker4:
+    <<: *worker
+    container_name: worker4
+    environment: {WORKER_ID: worker4, WORKER_URL: "http://worker4:8000", CONTROLLER_URL: "http://controller:8000"}
+    volumes: ["./storage/worker4:/data/chunks"]
+
+networks:
+  objstore:
+    driver: bridge
