@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mini Object Store · Console</title>
+<style>
+:root{--bg:#0b0f17;--panel:#111826;--panel2:#161f31;--line:#243049;--tx:#e6ebf5;--mut:#8a97b1;--acc:#7c9cff;
+--ok:#34d399;--bad:#f87171;--warn:#fbbf24;--w1:#60a5fa;--w2:#f472b6;--w3:#fbbf24;--w4:#34d399;--r:14px}
+*{box-sizing:border-box}html,body{margin:0}
+body{background:radial-gradient(1200px 600px at 10% -10%,#17224a55,transparent),var(--bg);color:var(--tx);
+font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;min-height:100vh}
+header{display:flex;align-items:center;gap:14px;padding:16px 24px;border-bottom:1px solid var(--line);position:sticky;top:0;
+background:#0b0f17dd;backdrop-filter:blur(10px);z-index:5}
+.logo{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,#7c9cff,#c084fc);display:grid;place-items:center;font-weight:800;color:#0b0f17}
+h1{font-size:16px;margin:0}h1 small{display:block;color:var(--mut);font-weight:400;font-size:12px}
+.chip{margin-left:auto;font:12px ui-monospace,Menlo,monospace;color:var(--mut);background:var(--panel);border:1px solid var(--line);padding:6px 10px;border-radius:999px;max-width:50vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chip b.ok{color:var(--ok)}.chip b.bad{color:var(--bad)}
+main{display:grid;grid-template-columns:minmax(340px,430px) 1fr;gap:18px;padding:18px 24px;max-width:1500px;margin:auto}
+@media(max-width:980px){main{grid-template-columns:1fr}}
+.col{display:flex;flex-direction:column;gap:18px;min-width:0}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:16px}
+.card h2{margin:0 0 12px;font-size:12px;letter-spacing:.09em;text-transform:uppercase;color:var(--mut);display:flex;align-items:center;gap:8px}
+.card h2 .sp{margin-left:auto;text-transform:none;letter-spacing:0;font-weight:400}
+.workers{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.worker{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:10px 12px;position:relative;overflow:hidden;transition:.3s}
+.worker::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--c)}
+.worker.off{opacity:.55;border-color:#5b2a33}.worker.off::after{content:"OFFLINE";position:absolute;right:10px;top:10px;font-size:10px;font-weight:700;color:var(--bad)}
+.worker .n{font-weight:600}.worker .s{color:var(--mut);font-size:12px}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--ok);margin-right:6px;box-shadow:0 0 8px var(--ok)}.off .dot{background:var(--bad);box-shadow:none}
+.bar{height:5px;background:#0b0f17;border-radius:4px;margin-top:8px;overflow:hidden}.bar i{display:block;height:100%;background:var(--c);transition:width .5s}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:12px}
+.stat{background:var(--panel2);border-radius:10px;padding:8px;text-align:center}.stat b{display:block;font-size:20px}.stat span{font-size:11px;color:var(--mut)}
+.stat.bad b{color:var(--bad)}.stat.warn b{color:var(--warn)}.stat.good b{color:var(--ok)}
+.hint{margin-top:10px;font:12px ui-monospace,Menlo,monospace;color:var(--mut);background:var(--panel2);padding:8px 10px;border-radius:8px;overflow:auto}
+.drop{border:2px dashed var(--line);border-radius:12px;padding:18px;text-align:center;color:var(--mut);cursor:pointer;transition:.2s}
+.drop.hot,.drop:hover{border-color:var(--acc);color:var(--tx);background:#7c9cff10}
+textarea,input[type=text]{width:100%;background:var(--panel2);color:var(--tx);border:1px solid var(--line);border-radius:10px;padding:9px 10px;font:12px ui-monospace,Menlo,monospace;resize:vertical}
+textarea:focus{outline:1px solid var(--acc)}
+.row{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;align-items:center}
+button{background:var(--panel2);color:var(--tx);border:1px solid var(--line);border-radius:9px;padding:7px 12px;font:inherit;cursor:pointer;transition:.15s}
+button:hover{border-color:var(--acc)}button.pri{background:var(--acc);color:#0b0f17;border-color:var(--acc);font-weight:600}
+button.dng:hover{border-color:var(--bad);color:var(--bad)}button:disabled{opacity:.5;cursor:wait}
+label.lb{font-size:12px;color:var(--mut)}
+table{width:100%;border-collapse:collapse}th{text-align:left;font-size:11px;color:var(--mut);text-transform:uppercase;letter-spacing:.06em;padding:6px 8px}
+td{padding:9px 8px;border-top:1px solid var(--line)}tr.o{cursor:pointer}tr.o:hover td,tr.sel td{background:#7c9cff14}
+.mono{font-family:ui-monospace,Menlo,monospace;font-size:12px}.mut{color:var(--mut)}
+.pill{display:inline-flex;align-items:center;gap:5px;font:600 11px ui-monospace,Menlo,monospace;padding:3px 8px;border-radius:999px;color:#0b0f17;background:var(--c);margin:2px 4px 2px 0}
+.pill.off{background:transparent;border:1px dashed var(--mut);color:var(--mut);text-decoration:line-through}
+.pill button{all:unset;cursor:pointer;opacity:.7;font-size:12px}.pill button:hover{opacity:1}
+.kv{display:grid;grid-template-columns:130px 1fr;gap:4px 12px;font-size:13px}.kv dt{color:var(--mut)}.kv dd{margin:0;word-break:break-all}
+.flash{animation:fl 1.4s}@keyframes fl{0%{background:#f8717155}100%{background:transparent}}
+.log{height:260px;overflow:auto;font:12px/1.5 ui-monospace,Menlo,monospace;background:#080c13;border-radius:10px;padding:8px 10px}
+.log div{white-space:pre-wrap;word-break:break-word}.log .WARNING{color:var(--warn)}.log .ERROR{color:var(--bad)}.log .t{color:#566280}
+.log .k{font-weight:700}.log .k.c{color:var(--bad)}.log .k.r{color:var(--ok)}.log .k.o{color:var(--warn)}.log .k.p{color:var(--acc)}
+.toast{position:fixed;right:18px;bottom:18px;display:flex;flex-direction:column;gap:8px;z-index:9}
+.toast div{background:var(--panel2);border:1px solid var(--line);border-left:4px solid var(--acc);padding:10px 14px;border-radius:10px;max-width:420px;animation:up .25s;box-shadow:0 8px 30px #0008}
+.toast .ok{border-left-color:var(--ok)}.toast .bad{border-left-color:var(--bad)}@keyframes up{from{transform:translateY(10px);opacity:0}}
+.empty{color:var(--mut);padding:18px;text-align:center}
+code{background:var(--panel2);padding:1px 6px;border-radius:5px}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">O</div>
+  <h1>Mini Object Store<small>1 controller · 4 workers · 1 MB chunks · RF=2</small></h1>
+  <div class="chip" id="last">no requests yet</div>
+</header>
+<main>
+ <div class="col">
+  <section class="card"><h2>Cluster <span class="sp" id="rfnote"></span></h2>
+    <div class="workers" id="workers"></div>
+    <div class="stats" id="stats"></div>
+    <div class="hint">Failure demo: <span id="cmd">docker stop worker2</span> &nbsp;→ watch it go OFFLINE, then <span>docker start worker2</span></div>
+  </section>
+  <section class="card"><h2>Upload</h2>
+    <div class="drop" id="drop">Drop a file here or click to choose<input type="file" id="file" hidden></div>
+    <div class="row"><label class="lb" for="meta">Custom metadata (JSON)</label></div>
+    <textarea id="meta" rows="2">{"owner":"demo","project":"cloud-computing"}</textarea>
+    <div class="row">
+      <button class="pri" id="up" disabled>Upload</button>
+      <span class="mut" id="picked">no file selected</span>
+    </div>
+    <div class="row"><span class="mut">Quick test data:</span>
+      <button data-rnd="0.5">0.5 MB</button><button data-rnd="1">1 MB</button><button data-rnd="3.5">3.5 MB</button><button data-rnd="10">10 MB</button>
+      <button data-rnd="0">0 bytes</button>
+    </div>
+  </section>
+  <section class="card"><h2>Live events <span class="sp"><button id="clr">clear</button></span></h2><div class="log" id="log"></div></section>
+ </div>
+ <div class="col">
+  <section class="card"><h2>Objects <span class="sp" id="count"></span></h2><div id="objs"></div></section>
+  <section class="card" id="detail" hidden></section>
+ </div>
+</main>
+<div class="toast" id="toast"></div>
+<script>
+const $=s=>document.querySelector(s);
+const COL={worker1:'var(--w1)',worker2:'var(--w2)',worker3:'var(--w3)',worker4:'var(--w4)'};
+const col=w=>COL[w]||'var(--acc)';
+const fmt=n=>n<1024?n+' B':n<1048576?(n/1024).toFixed(1)+' KB':(n/1048576).toFixed(2)+' MB';
+let sel=null,picked=null,lastEvt=0,demo=true,lastMeta='';
+function el(t,a={},...k){const e=document.createElement(t);for(const[x,v]of Object.entries(a)){if(x==='class')e.className=v;else if(x.startsWith('on'))e[x]=v;else e.setAttribute(x,v)}
+ for(const c of k.flat())if(c!=null)e.append(c.nodeType?c:document.createTextNode(c));return e}
+function toast(msg,cls=''){const d=el('div',{class:cls},msg);$('#toast').append(d);setTimeout(()=>d.remove(),4500)}
+async function api(method,path,opt={}){
+  const t0=performance.now();let r;
+  try{r=await fetch(path,{method,...opt})}catch(e){setLast(method,path,'network error',false);throw e}
+  if(!path.includes('/events')&&!path.includes('/cluster/status')&&!(method==='GET'&&path==='/api/v1/objects'))setLast(method,path,r.status,r.ok,Math.round(performance.now()-t0));
+  return r}
+function setLast(m,p,s,ok,ms){const c=$('#last');c.replaceChildren(`${m} ${p.split('?')[0]} → `,el('b',{class:ok?'ok':'bad'},String(s)),ms!=null?` · ${ms} ms`:'')}
+async function jerr(r){try{const j=await r.json();return `${r.status} ${j.error}: ${j.detail}`}catch{return 'HTTP '+r.status}}
+
+/* ---------- cluster ---------- */
+async function pollStatus(){
+  const s=await(await api('GET','/api/v1/cluster/status')).json();
+  $('#rfnote').textContent='RF='+s.replication_factor;
+  const maxc=Math.max(1,...s.workers.map(w=>w.chunks_in_metadata));
+  $('#workers').replaceChildren(...s.workers.map(w=>el('div',{class:'worker '+(w.status==='HEALTHY'?'':'off'),style:'--c:'+col(w.worker_id)},
+    el('div',{class:'n'},el('span',{class:'dot'}),w.worker_id),
+    el('div',{class:'s'},`${w.chunks_in_metadata} chunks · ${fmt(w.disk_usage_bytes)}`),
+    el('div',{class:'s'},w.status==='HEALTHY'?`heartbeat ${w.seconds_since_heartbeat}s ago`:`silent ${w.seconds_since_heartbeat}s`),
+    el('div',{class:'bar'},el('i',{style:`width:${Math.round(100*w.chunks_in_metadata/maxc)}%`})))));
+  const r=s.replication,st=(l,v,c)=>el('div',{class:'stat '+c},el('b',{},v),el('span',{},l));
+  $('#stats').replaceChildren(st('healthy workers',`${r.healthy_workers}/4`,r.healthy_workers===4?'good':'warn'),st('total chunks',r.total_chunks,''),
+    st('under-replicated',r.under_replicated,r.under_replicated?'bad':'good'),st('over-replicated',r.over_replicated,r.over_replicated?'warn':'good'));
+}
+
+/* ---------- objects ---------- */
+async function pollObjects(){
+  const j=await(await api('GET','/api/v1/objects?limit=200')).json();
+  $('#count').textContent=j.total+' stored';
+  if(!j.objects.length){$('#objs').replaceChildren(el('div',{class:'empty'},'No objects yet — upload one or use a quick test file.'));return}
+  const rows=j.objects.slice().reverse().map(o=>el('tr',{class:'o'+(o.object_id===sel?' sel':''),onclick:()=>select(o.object_id)},
+    el('td',{},o.name),el('td',{class:'mono'},fmt(o.size)),el('td',{class:'mono'},o.num_chunks),el('td',{class:'mut'},o.content_type),el('td',{class:'mono mut'},o.object_id.slice(0,8))));
+  $('#objs').replaceChildren(el('table',{},el('tr',{},...['Name','Size','Chunks','Type','ID'].map(h=>el('th',{},h))),...rows));
+}
+async function select(id){sel=id;lastMeta='';await refreshDetail();pollObjects()}
+async function refreshDetail(){
+  if(!sel)return;const r=await api('GET',`/api/v1/objects/${sel}/metadata`);
+  if(r.status===404){sel=null;$('#detail').hidden=true;return}
+  const m=await r.json(),sig=JSON.stringify(m);if(sig===lastMeta)return;lastMeta=sig;renderDetail(m)}
+function renderDetail(m){
+  const d=$('#detail'),keep=document.activeElement?.id==='cm'?$('#cm').value:null;d.hidden=false;
+  const chunks=m.chunks.map(c=>el('tr',{},el('td',{class:'mono'},c.chunk_index),el('td',{class:'mono'},fmt(c.size)),
+    el('td',{class:'mono mut',title:c.checksum},c.checksum.slice(0,12)+'…'),
+    el('td',{},...c.locations.map(w=>el('span',{class:'pill',style:'--c:'+col(w)},w,
+        demo?el('button',{title:'Corrupt this replica on disk',onclick:()=>corrupt(c.chunk_id,w)},'⚡'):null)),
+      ...c.offline_locations.map(w=>el('span',{class:'pill off',title:'stale copy on offline worker'},w)),
+      c.locations.length<2?el('span',{class:'mono',style:'color:var(--bad)'},' under-replicated'):null)));
+  d.replaceChildren(
+    el('h2',{},'Object detail',el('span',{class:'sp'},
+      el('button',{class:'pri',id:'vbtn',onclick:()=>verify(m)},'Download & verify'),' ',
+      el('button',{class:'dng',onclick:()=>del(m.object_id)},'Delete'))),
+    el('dl',{class:'kv'},...[['object_id',m.object_id],['name',m.name],['size',`${m.size} bytes (${fmt(m.size)})`],['content_type',m.content_type],
+      ['created_at',m.created_at],['last_modified_at',m.last_modified_at],['checksum (SHA-256)',m.checksum],['num_chunks',m.num_chunks]]
+      .flatMap(([k,v])=>[el('dt',{},k),el('dd',{class:'mono'},v)])),
+    el('div',{id:'vres',class:'hint',hidden:''},''),
+    el('h2',{style:'margin-top:16px'},'Chunk map',el('span',{class:'sp'},demo?'⚡ = corrupt that replica, then press “Download & verify”':'')),
+    m.chunks.length?el('table',{},el('tr',{},...['#','Size','SHA-256','Replicas'].map(h=>el('th',{},h))),...chunks):el('div',{class:'empty'},'0-byte object: no chunks'),
+    el('h2',{style:'margin-top:16px'},'Custom metadata (PATCH)'),
+    el('textarea',{id:'cm',rows:4},keep??JSON.stringify(m.custom_metadata,null,2)),
+    el('div',{class:'row'},el('button',{class:'pri',onclick:patch},'Save changes'),
+      el('span',{class:'mut'},'Merges keys; a null value removes a key. Invalid JSON is sent as-is so you can see the 400.')));
+}
+async function patch(){
+  const r=await api('PATCH',`/api/v1/objects/${sel}/metadata`,{headers:{'Content-Type':'application/json'},body:$('#cm').value});
+  if(r.ok){toast('Metadata updated — object data not re-uploaded','ok');lastMeta='';await refreshDetail()}else toast(await jerr(r),'bad')}
+async function del(id){
+  if(!confirm('Delete this object and all its chunks?'))return;const r=await api('DELETE',`/api/v1/objects/${id}`);
+  if(r.status===204){toast('Deleted (204)','ok');sel=null;$('#detail').hidden=true;refreshAll()}else toast(await jerr(r),'bad')}
+async function corrupt(cid,w){
+  const r=await api('POST','/api/v1/demo/corrupt',{headers:{'Content-Type':'application/json'},body:JSON.stringify({chunk_id:cid,worker_id:w})});
+  toast(r.ok?`Corrupted a chunk on ${w}'s disk. It will be caught on the next download or scrub.`:await jerr(r),r.ok?'':'bad')}
+async function verify(m){
+  const b=$('#vbtn'),v=$('#vres');b.disabled=true;v.hidden=false;v.textContent='downloading…';
+  try{const t0=performance.now(),r=await api('GET',`/api/v1/objects/${m.object_id}`);
+    if(!r.ok){v.textContent='✘ '+await jerr(r);return}
+    const buf=await r.arrayBuffer(),h=[...new Uint8Array(await crypto.subtle.digest('SHA-256',buf))].map(x=>x.toString(16).padStart(2,'0')).join('');
+    const ok=h===m.checksum;v.replaceChildren(el('b',{style:'color:var(--'+(ok?'ok':'bad')+')'},ok?'✔ byte-for-byte match':'✘ MISMATCH'),
+      ` — ${fmt(buf.byteLength)} in ${Math.round(performance.now()-t0)} ms · browser SHA-256 ${h.slice(0,16)}… ${ok?'=':'≠'} stored checksum · `,
+      el('a',{href:URL.createObjectURL(new Blob([buf],{type:r.headers.get('content-type')})),download:m.name,style:'color:var(--acc)'},'save file'));
+    pollEvents();setTimeout(refreshAll,400);
+  }finally{b.disabled=false}}
+
+/* ---------- upload ---------- */
+function pick(f){picked=f;$('#picked').textContent=f?`${f.name} · ${fmt(f.size)}`:'no file selected';$('#up').disabled=!f}
+$('#drop').onclick=()=>$('#file').click();$('#file').onchange=e=>pick(e.target.files[0]);
+$('#drop').ondragover=e=>{e.preventDefault();$('#drop').classList.add('hot')};$('#drop').ondragleave=()=>$('#drop').classList.remove('hot');
+$('#drop').ondrop=e=>{e.preventDefault();$('#drop').classList.remove('hot');pick(e.dataTransfer.files[0])};
+async function upload(file){
+  const fd=new FormData();fd.append('file',file,file.name);if($('#meta').value.trim())fd.append('metadata',$('#meta').value);
+  $('#up').disabled=true;
+  try{const r=await api('POST','/api/v1/objects',{body:fd});
+    if(r.status===201){const m=await r.json();toast(`Stored ${m.name}: ${m.num_chunks} chunk(s) × 2 replicas`,'ok');pick(null);await select(m.object_id);refreshAll()}
+    else toast(await jerr(r),'bad')}finally{$('#up').disabled=!picked}}
+$('#up').onclick=()=>picked&&upload(picked);
+document.querySelectorAll('[data-rnd]').forEach(b=>b.onclick=()=>{
+  const n=Math.round(parseFloat(b.dataset.rnd)*1048576),a=new Uint8Array(n);
+  for(let i=0;i<n;i+=65536)crypto.getRandomValues(a.subarray(i,Math.min(i+65536,n)));
+  upload(new File([a],`random-${b.dataset.rnd}MB.bin`,{type:'application/octet-stream'}))});
+
+/* ---------- events ---------- */
+function kind(m){for(const[k,c]of[['CORRUPTION DETECTED','c'],['CORRUPTION RESTORED','r'],['OFFLINE','o'],['RE-REPLICATION','p'],['PRUNED','p'],['BACK ONLINE','r'],['REGISTERED','r'],['SYNC','p'],['MISSING','c']])
+  if(m.includes(k))return[k,c];return null}
+async function pollEvents(){
+  const j=await(await api('GET','/api/v1/events?after='+lastEvt)).json();demo=j.demo_mode;lastEvt=j.last_id;const L=$('#log');
+  const stick=L.scrollTop+L.clientHeight>=L.scrollHeight-30;
+  for(const e of j.events){const k=kind(e.msg),t=new Date(e.ts*1000).toLocaleTimeString();
+    const body=k?[el('span',{class:'k '+k[1]},k[0]),e.msg.replace(k[0],'')]:[e.msg];
+    L.append(el('div',{class:e.level},el('span',{class:'t'},t+' '),...body));
+    if(k&&k[1]==='c'){lastMeta='';}}
+  if(j.events.length&&stick)L.scrollTop=L.scrollHeight;if(j.events.length>0)refreshDetail()}
+$('#clr').onclick=()=>$('#log').replaceChildren();
+
+async function refreshAll(){try{await Promise.all([pollStatus(),pollObjects(),refreshDetail()])}catch(e){}}
+refreshAll();pollEvents();setInterval(refreshAll,2000);setInterval(()=>pollEvents().catch(()=>{}),1500);
+</script>
+</body>
+</html>
